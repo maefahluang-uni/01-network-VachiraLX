@@ -3,21 +3,42 @@ package th.mfu;
 import java.io.*;
 import java.net.*;
 
-// call mockup server at port 8080
 public class MockWebClient {
     public static void main(String[] args) {
+        Socket socket = null;
 
-        // TODO: Create a socket to connect to the web server on port 8080
+        try {
+            // Create a socket to connect to localhost at port 8080
+            socket = new Socket("localhost", 8080);
 
-        // :TODO Create input and output streams for the socket
+            // Create output stream to send request
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-        // TODO: send an HTTP GET request to the web server
-        String request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+            // Create input stream to read response
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-        // Read the response from the web server and print out to console
+            // Send HTTP GET request
+            String request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+            out.print(request);
+            out.flush();
 
-        // Close the socket
+            // Read and print the response
+            String responseLine;
+            while ((responseLine = in.readLine()) != null) {
+                System.out.println(responseLine);
+            }
 
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+        } finally {
+            // Close socket and resources
+            try {
+                if (socket != null) {
+                    socket.close();
+                }
+            } catch (IOException ex) {
+                System.err.println("Error closing socket: " + ex.getMessage());
+            }
+        }
     }
-
 }

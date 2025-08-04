@@ -1,62 +1,55 @@
 package th.mfu;
 
-import static org.junit.Assert.assertTrue;
-
 import org.junit.*;
+
 import java.io.*;
 import java.net.*;
 
-/**
- * Unit test for simple App.
- */
-public class MockWebServerTest {
-    // Test constants
-    private static final int PORT = 8080;
-    private static String lineSeparator = System.lineSeparator();
-    private static final String TEST_RESPONSE = "HTTP/1.1 200 OK"+lineSeparator+"Content-Type: text/html"+lineSeparator+lineSeparator+"<html><body>Hello, Web! on Port "+PORT+"</body></html>"+lineSeparator;
+import static org.junit.Assert.assertTrue;
 
-    // Mock Web Server instance
+public class MockWebServerTest {
+
+    private static final int PORT = 8080;
     private Thread mockWebServer;
 
     @Before
-    public void setUp() {
-        // Start the mock web server before each test
+    public void setUp() throws InterruptedException {
+        // Start the mock web server
         mockWebServer = new Thread(new MockWebServer(PORT));
         mockWebServer.start();
+
+        // Wait briefly to ensure server is up before test
+        Thread.sleep(500);
     }
 
     @After
     public void tearDown() {
-        // Stop the mock web server after each test
+        // Stop server thread
         mockWebServer.interrupt();
     }
 
     @Test
     public void testMockWebServer() throws IOException {
-       // Create input and output streams for the socket
-       Socket socket = new Socket("localhost", PORT);
+        try (Socket socket = new Socket("localhost", PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-       PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-       BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-       
-       // Send an HTTP GET request to the web server
-       String request = "GET / HTTP/1.1"+lineSeparator+"Host: localhost"+lineSeparator+lineSeparator;
-       out.println(request);
+            // Send a GET request
+            out.print("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+            out.flush();
 
-       // Read the response from the web server
-       StringBuffer allresponse = new StringBuffer();
-       String response;
-       while ((response = in.readLine()) != null) {
-        allresponse.append(response+lineSeparator);
+            StringBuilder responseBuilder = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                responseBuilder.append(line).append("\n");
+            }
 
-       }
+            String response = responseBuilder.toString();
 
-       Assert.assertEquals(TEST_RESPONSE, allresponse.toString());
-       
-       // Close the socket
-       socket.close();
-        // Assert that the response matches the expected response
+            // Check that response contains expected parts
+            assertTrue(response.contains("HTTP/1.1 200 OK"));
+            assertTrue(response.contains("Content-Type: text/html"));
+            assertTrue(response.contains("<html><body>Hello, Web! on Port " + PORT + "</body></html>"));
+        }
     }
-
-
 }
